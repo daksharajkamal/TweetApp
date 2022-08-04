@@ -6,6 +6,8 @@ import com.tweetapp.domain.Users;
 
 public interface UsersDao {
 
+	public Users save(Users users);
+
 	public Users getUserByUsername(String username);
 
 	public Boolean isUserAdmin(String username);

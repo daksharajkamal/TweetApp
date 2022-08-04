@@ -17,4 +17,5 @@ public interface TweetsDao {
 
 	public Likes likeTweet(String id);
 
+	public Likes save(Likes like);
 }

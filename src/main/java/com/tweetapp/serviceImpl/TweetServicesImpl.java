@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import com.tweetapp.dao.TweetsDao;
@@ -19,8 +21,6 @@ import com.tweetapp.domain.Users;
 import com.tweetapp.payload.request.TweetRequest;
 import com.tweetapp.payload.response.TweetResponse;
 import com.tweetapp.payload.response.TweetResponseList;
-import com.tweetapp.repository.LikeRepository;
-import com.tweetapp.repository.UserRepository;
 import com.tweetapp.service.TweetServices;
 import com.tweetapp.util.TweetAppConstants;
 
@@ -29,21 +29,22 @@ public class TweetServicesImpl implements TweetServices {
 
 	private static final Logger LOG = LoggerFactory.getLogger(TweetServices.class);
 
-	@Autowired
-	UsersDao usersDao;
+	@Value(value = "{kafka.topicName}")
+	private String topicName;
 
 	@Autowired
-	TweetsDao tweetsDao;
+	private UsersDao usersDao;
 
 	@Autowired
-	LikeRepository likeRepository;
+	private TweetsDao tweetsDao;
 
 	@Autowired
-	UserRepository userRepository;
+	private KafkaTemplate<String, String> kafkaTemplate;
 
 	@Override
 	public void createTweet(TweetRequest tweetRequest) {
 		LOG.info("inside createTweet()");
+		kafkaTemplate.send(topicName, tweetRequest.getTweetString());
 		Users user = usersDao.getUserByUsername(tweetRequest.getUsername());
 		Tweets tweet = new Tweets(tweetRequest.getTweetString(), user);
 		tweet.setCreatedBy(tweetRequest.getUsername());
@@ -53,13 +54,14 @@ public class TweetServicesImpl implements TweetServices {
 			Set<Tweets> tweets = user.getTweets();
 			tweets.add(tweet);
 			user.setTweets(tweets);
-			userRepository.save(user);
+			usersDao.save(user);
 		}
 	}
 
 	@Override
 	public void updateTweet(TweetRequest tweetRequest) {
 		LOG.info("inside updateTweet()");
+		kafkaTemplate.send(topicName, tweetRequest.getTweetString());
 		Tweets tweet = tweetsDao.findTweetById(tweetRequest.getId());
 		Users users = usersDao.getUserByUsername(tweetRequest.getUsername());
 		LOG.info("User is havin Admin Role: " + usersDao.isUserAdmin(tweetRequest.getUsername()));
@@ -73,6 +75,7 @@ public class TweetServicesImpl implements TweetServices {
 
 	@Override
 	public TweetResponseList getAllTweets() {
+		LOG.info("inside getAllTweets()");
 		List<Tweets> allTweets = tweetsDao.getAllTweets();
 		TweetResponseList tweetList = new TweetResponseList();
 		List<TweetResponse> tweets = new ArrayList<>();
@@ -80,6 +83,7 @@ public class TweetServicesImpl implements TweetServices {
 			TweetResponse tr = new TweetResponse();
 			tr.setId(tweet.getId());
 			tr.setTweetMessage(tweet.getTweetMessage());
+			kafkaTemplate.send(topicName, tweet.getTweetMessage());
 			tr.setUsername(tweet.getUsername().getUsername());
 			tr.setCreatedBy(tweet.getCreatedBy());
 			tr.setCtearedAt(tweet.getCreatedAt());
@@ -97,6 +101,8 @@ public class TweetServicesImpl implements TweetServices {
 
 	@Override
 	public Boolean deleteTweet(String username, String id) {
+		LOG.info("inside deleteTweet()");
+		kafkaTemplate.send(topicName, "Deleting tweet with Id: " + id);
 		Tweets tweet = tweetsDao.findTweetById(id);
 		if (tweet.getUsername().getUsername().equals(username) || usersDao.isUserAdmin(username)) {
 			tweetsDao.delete(id);
@@ -107,6 +113,7 @@ public class TweetServicesImpl implements TweetServices {
 
 	@Override
 	public Boolean likeTweet(String username, String id) {
+		LOG.info("inside likeTweet()");
 		Tweets tweet = tweetsDao.findTweetById(id);
 		Likes like = null;
 		if (!tweet.getLikes().isEmpty()) {
@@ -116,8 +123,10 @@ public class TweetServicesImpl implements TweetServices {
 			if (!likedUser.isEmpty()) {
 				like = likedUser.get(0);
 				if (like.getIsActive().equals(TweetAppConstants.CHARACTER_Y)) {
+					kafkaTemplate.send(topicName, "Dis-liked tweet with Id: " + id);
 					like.setIsActive(TweetAppConstants.CHARACTER_N);
 				} else if (like.getIsActive().equals(TweetAppConstants.CHARACTER_N)) {
+					kafkaTemplate.send(topicName, "Liked tweet with Id: " + id);
 					like.setIsActive(TweetAppConstants.CHARACTER_Y);
 				}
 			} else {
@@ -126,6 +135,7 @@ public class TweetServicesImpl implements TweetServices {
 				like.setUsername(usersDao.getUserByUsername(username));
 				like.setCreatedAt(new Date());
 				like.setCreatedBy(username);
+				kafkaTemplate.send(topicName, "Liked tweet with Id: " + id);
 				like.setIsActive(TweetAppConstants.CHARACTER_Y);
 			}
 		} else {
@@ -134,9 +144,10 @@ public class TweetServicesImpl implements TweetServices {
 			like.setUsername(usersDao.getUserByUsername(username));
 			like.setCreatedAt(new Date());
 			like.setCreatedBy(username);
+			kafkaTemplate.send(topicName, "Liked tweet with Id: " + id);
 			like.setIsActive(TweetAppConstants.CHARACTER_Y);
 		}
-		like = likeRepository.save(like);
+		like = tweetsDao.save(like);
 		Set<Likes> likes = tweet.getLikes();
 		likes.add(like);
 		tweet.setLikes(likes);
@@ -150,6 +161,8 @@ public class TweetServicesImpl implements TweetServices {
 
 	@Override
 	public TweetResponseList getAllTweetsByUsername(String username) {
+		LOG.info("inside getAllTweetsByUsername()");
+		kafkaTemplate.send(topicName, "For User: " + username);
 		Users user = usersDao.getUserByUsername(username);
 		TweetResponseList tweetList = new TweetResponseList();
 		List<TweetResponse> tweets = new ArrayList<>();
@@ -157,6 +170,7 @@ public class TweetServicesImpl implements TweetServices {
 		userTweets.forEach(tweet -> {
 			TweetResponse tr = new TweetResponse();
 			tr.setId(tweet.getId());
+			kafkaTemplate.send(topicName, tweet.getTweetMessage());
 			tr.setTweetMessage(tweet.getTweetMessage());
 			tr.setUsername(tweet.getUsername().getUsername());
 			tr.setCreatedBy(tweet.getCreatedBy());
@@ -176,6 +190,7 @@ public class TweetServicesImpl implements TweetServices {
 	@Override
 	public void replyToTweet(TweetRequest tweetRequest, String tweetId) {
 		LOG.info("inside replyToTweet()");
+		kafkaTemplate.send(topicName, "Replying " + "tweetRequest.getTweetString()" + " to: " + tweetId + ".");
 		Users user = usersDao.getUserByUsername(tweetRequest.getUsername());
 		Tweets tweet = tweetsDao.findTweetById(tweetId);
 		Tweets reTweet = new Tweets(tweetRequest.getTweetString(), user);
@@ -189,7 +204,7 @@ public class TweetServicesImpl implements TweetServices {
 			tweetSet.add(reTweet);
 			user.setTweets(tweets);
 			tweet.setReTweets(tweetSet);
-			userRepository.save(user);
+			usersDao.save(user);
 			tweetsDao.save(tweet);
 		}
 	}

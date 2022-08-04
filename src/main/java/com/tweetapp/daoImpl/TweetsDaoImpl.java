@@ -18,13 +18,13 @@ import com.tweetapp.repository.TweetsRepository;
 public class TweetsDaoImpl implements TweetsDao {
 
 	@Autowired
-	MongoTemplate mongoTemplate;
+	private MongoTemplate mongoTemplate;
 
 	@Autowired
-	TweetsRepository tweetsRepository;
+	private TweetsRepository tweetsRepository;
 
 	@Autowired
-	LikeRepository likeRepository;
+	private LikeRepository likeRepository;
 
 	public Tweets save(Tweets tweets) {
 		return tweetsRepository.save(tweets);
@@ -60,6 +60,11 @@ public class TweetsDaoImpl implements TweetsDao {
 			return likes.get(0);
 		}
 		return null;
+	}
+
+	@Override
+	public Likes save(Likes like) {
+		return likeRepository.save(like);
 	}
 
 }

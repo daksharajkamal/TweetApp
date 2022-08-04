@@ -25,13 +25,13 @@ public class UserDaoImpl implements UsersDao {
 	private static final Logger LOG = LoggerFactory.getLogger(UserDaoImpl.class);
 
 	@Autowired
-	MongoTemplate mongoTemplate;
+	private MongoTemplate mongoTemplate;
 
 	@Autowired
-	UserRepository userRepository;
+	private UserRepository userRepository;
 
 	@Autowired
-	RolesRepository rolesRepository;
+	private RolesRepository rolesRepository;
 
 	@Override
 	public Users getUserByUsername(String username) {
@@ -71,5 +71,10 @@ public class UserDaoImpl implements UsersDao {
 		LOG.info(":" + query);
 		List<Users> users = mongoTemplate.find(query, Users.class);
 		return users;
+	}
+
+	@Override
+	public Users save(Users users) {
+		return userRepository.save(users);
 	}
 }

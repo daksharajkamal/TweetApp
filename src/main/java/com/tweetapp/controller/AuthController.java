@@ -62,6 +62,7 @@ public class AuthController {
 
 	@GetMapping("/login")
 	public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+
 		Authentication authentication = authenticationManager.authenticate(
 				new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 		SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -123,7 +124,7 @@ public class AuthController {
 		if (user == null) {
 			return ResponseEntity.badRequest().body(new MessageResponse("Error: User does not exists!"));
 		} else {
-			String randomPassword = "temp"
+			String randomPassword = "temp_"
 					+ TweetAppUtil.generateRandomString(TweetAppConstants.RANDOM_PASSWORD_LEFT_LIMIT,
 							TweetAppConstants.RANDOM_PASSWORD_RIGHT_LIMIT, TweetAppConstants.RANDOM_PASSWORD_LENGTH);
 			user.setPassword(encoder.encode(randomPassword));
