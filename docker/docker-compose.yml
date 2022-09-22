@@ -1,0 +1,16 @@
+version: "3.3"
+services:
+  api_service:
+    build: .
+    restart: always
+    ports:
+      - "8682:8682"
+    environment:
+      SPRING_PROFILES_ACTIVE: "dev"
+    depends_on:
+      - mongo_db
+  mongo_db:
+    image: "mongo:4.4.3"
+    restart: always
+    ports:
+      - "27017:27017"
