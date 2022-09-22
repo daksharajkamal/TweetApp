@@ -28,7 +28,7 @@ import lombok.extern.log4j.Log4j2;
  * @author cogjava729
  * 
  */
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "*")
 @RestController
 @Api
 @Log4j2

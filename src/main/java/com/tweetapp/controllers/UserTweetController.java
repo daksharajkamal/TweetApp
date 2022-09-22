@@ -30,7 +30,7 @@ import lombok.extern.log4j.Log4j2;
  * @author cogjava729
  */
 @Log4j2
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/v1.0")
 public class UserTweetController {
